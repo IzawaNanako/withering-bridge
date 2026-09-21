@@ -1,3 +1,3 @@
-# Discord Bridge for Minecraft
+# Withering Bridge
 
 README W.I.P
