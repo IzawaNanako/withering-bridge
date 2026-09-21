@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "dc-bridge",
+	"version": "${version}",
+	"name": "dc-bridge",
+	"description": "placeholder",
+	"authors": [
+		"Wither"
+	],
+	"contact": {
+		"homepage": "https://www.saduwub.com/",
+		"sources": "https://github.com/IzawaNanako/dc-bridge"
+	},
+	"license": "LGPL-3.0-or-later",
+	"icon": "icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"server": [
+			"com.saduwub.dc_bridge.DcBridge"
+		]
+	},
+	"mixins": [
+		"withering-hearts.mixins.json",
+		{
+			"config": "dc-bridge.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

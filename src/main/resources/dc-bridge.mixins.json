@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "com.saduwub.dc_bridge.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"server": [
+		"PlayerAdvancementsMixin",
+		"ServerPlayerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
