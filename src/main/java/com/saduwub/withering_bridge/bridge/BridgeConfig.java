@@ -1,8 +1,8 @@
-package com.saduwub.dc_bridge.bridge;
+package com.saduwub.withering_bridge.bridge;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.saduwub.dc_bridge.DcBridge;
+import com.saduwub.withering_bridge.WitheringBridge;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
@@ -14,7 +14,7 @@ import java.util.Set;
 
 public class BridgeConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final File CONFIG_FILE = new File(FabricLoader.getInstance().getConfigDir().toFile(), "dc-bridge.json");
+    private static final File CONFIG_FILE = new File(FabricLoader.getInstance().getConfigDir().toFile(), "withering-bridge.json");
     private static BridgeConfig instance;
 
     public boolean enableBridge = true;
@@ -22,7 +22,7 @@ public class BridgeConfig {
     public String wsSecret = "";
 
     private static final Set<String> PLACEHOLDERS = Set.of(
-            "", "CHANGE_ME", "YOUR_SECRET_HERE", "SECRET", "DEFAULT"
+            "", "SECRET", "VERYSECRET"
     );
 
     public static BridgeConfig get() {
@@ -43,7 +43,7 @@ public class BridgeConfig {
                     config = new BridgeConfig();
                 }
             } catch (IOException e) {
-                DcBridge.LOGGER.warn("[Discord Bridge] Could not read config file, generating default.");
+                WitheringBridge.LOGGER.warn("[Withering Bridge] Could not read config file, generating default.");
             }
         } else {
             needsSave = true;
@@ -52,7 +52,7 @@ public class BridgeConfig {
         if (isPlaceholder(config.wsSecret)) {
             config.wsSecret = generateSecret();
             needsSave = true;
-            DcBridge.LOGGER.info("[Discord bridge] Generated a new secret. Check config/dc-bridge.json to view it.");
+            WitheringBridge.LOGGER.info("[Withering Bridge] Generated a new secret. Check config/dc-bridge.json to view it.");
         }
 
         if (needsSave) {
@@ -83,7 +83,7 @@ public class BridgeConfig {
 
         if (parentDir != null && !parentDir.exists()) {
             if (!parentDir.mkdir()) {
-                DcBridge.LOGGER.error("[Discord Bridge] Failed to create config directory.");
+                WitheringBridge.LOGGER.error("[Withering Bridge] Failed to create config directory.");
                 return;
             }
         }
@@ -91,7 +91,7 @@ public class BridgeConfig {
         try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(config, writer);
         } catch (IOException e) {
-            DcBridge.LOGGER.error("[Discord Bridge] Failed to save config file.", e);
+            WitheringBridge.LOGGER.error("[Withering Bridge] Failed to save config file.", e);
         }
     }
 }

@@ -9,5 +9,4 @@ pluginManagement {
 	}
 }
 
-// Should match your modid
-rootProject.name = 'dc-bridge'
+rootProject.name = 'withering-bridge'

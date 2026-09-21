@@ -1,7 +1,7 @@
-package com.saduwub.dc_bridge.mixin;
+package com.saduwub.withering_bridge.mixin;
 
-import com.saduwub.dc_bridge.bridge.BridgePayloads;
-import com.saduwub.dc_bridge.bridge.BridgeWebSocketClient;
+import com.saduwub.withering_bridge.bridge.BridgePayloads;
+import com.saduwub.withering_bridge.bridge.BridgeWebSocketClient;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import org.spongepowered.asm.mixin.Mixin;

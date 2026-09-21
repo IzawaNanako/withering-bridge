@@ -1,4 +1,4 @@
-package com.saduwub.dc_bridge.bridge;
+package com.saduwub.withering_bridge.bridge;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;

@@ -1,4 +1,4 @@
-package com.saduwub.dc_bridge.bridge;
+package com.saduwub.withering_bridge.bridge;
 
 import com.google.gson.JsonElement;
 import java.util.List;

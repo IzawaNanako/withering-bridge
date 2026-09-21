@@ -1,6 +1,6 @@
 {
 	"required": true,
-	"package": "com.saduwub.dc_bridge.mixin",
+	"package": "com.saduwub.withering_bridge.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"server": [
 		"PlayerAdvancementsMixin",

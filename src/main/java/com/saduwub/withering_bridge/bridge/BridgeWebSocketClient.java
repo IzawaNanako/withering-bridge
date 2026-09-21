@@ -1,7 +1,7 @@
-package com.saduwub.dc_bridge.bridge;
+package com.saduwub.withering_bridge.bridge;
 
 import com.google.gson.Gson;
-import com.saduwub.dc_bridge.DcBridge;
+import com.saduwub.withering_bridge.WitheringBridge;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -24,7 +24,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
     private final StringBuilder textBuffer = new StringBuilder();
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
-        Thread thread = new Thread(runnable, "WitheringHearts-WS");
+        Thread thread = new Thread(runnable, "WitheringBridge-WS");
         thread.setDaemon(true);
         return thread;
     });
@@ -101,7 +101,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                     processDiscordMessage(chatData);
                 }
             } catch (Exception e) {
-                DcBridge.LOGGER.error("[Discord Bridge] Failed to parse incoming Discord message: {}", e.getMessage());
+                WitheringBridge.LOGGER.error("[Withering Bridge] Failed to parse incoming Discord message: {}", e.getMessage());
             }
         }
 
