@@ -41,15 +41,13 @@ public class BridgeEventHandler {
             }
         });
 
-        ServerMessageEvents.GAME_MESSAGE.register((server, message, overlay) -> {
-            if (overlay) {
+        ServerMessageEvents.COMMAND_MESSAGE.register((message, source, _) -> {
+            if (source.isPlayer()) {
                 return;
             }
 
-            String text = message.getString();
-
-            if ((text.startsWith("[Server]") || text.startsWith("* Server ")) && BridgeWebSocketClient.getInstance() != null) {
-                BridgePayloads.McSystemData data = new BridgePayloads.McSystemData(text, "console");
+            if (BridgeWebSocketClient.getInstance() != null) {
+                BridgePayloads.McSystemData data = new BridgePayloads.McSystemData(message.signedContent(), "console");
                 BridgeWebSocketClient.getInstance().sendPayload("system_mc_to_discord", data);
             }
         });
