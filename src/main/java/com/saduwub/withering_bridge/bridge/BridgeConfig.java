@@ -15,15 +15,11 @@ import java.util.Set;
 public class BridgeConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final File CONFIG_FILE = new File(FabricLoader.getInstance().getConfigDir().toFile(), "withering-bridge.json");
+    private static final Set<String> PLACEHOLDERS = Set.of("", "SECRET", "VERYSECRET");
     private static BridgeConfig instance;
-
     public boolean enableBridge = true;
     public String wsUri = "ws://localhost:5565";
     public String wsSecret = "";
-
-    private static final Set<String> PLACEHOLDERS = Set.of(
-            "", "SECRET", "VERYSECRET"
-    );
 
     public static BridgeConfig get() {
         if (instance == null) {

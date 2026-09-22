@@ -1,65 +1,55 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'maven-publish'
 }
 
-loom {
-	splitEnvironmentSourceSets()
+version = "${project.mod_version}+mc${project.minecraft_version}"
 
-	mods {
-		"withering-bridge" {
-			sourceSet sourceSets.main
-		}
-	}
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "withering-bridge" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+base {
+    archivesName = "${project.name}-fabric"
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
-	def version = "${project.version}+${minecraft_version}"
-	inputs.property "version", version
+    def version = project.version
+    inputs.property "version", version
 
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
+    filesMatching("fabric.mod.json") {
+        expand "version": version
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+    it.options.release = 25
 }
 
 java {
-	withSourcesJar()
+    withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
+    def projectName = project.name
+    inputs.property "projectName", projectName
 
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+    from("LICENSE") {
+        rename { "${it}_$projectName" }
+    }
 }

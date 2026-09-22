@@ -1,31 +1,31 @@
 {
-	"schemaVersion": 1,
-	"id": "withering-bridge",
-	"version": "${version}",
-	"name": "Withering Bridge",
-	"description": "Lite mod that bridges the chat between Minecraft and Discord.",
-	"authors": [
-		"Wither"
-	],
-	"contact": {
-		"homepage": "https://www.saduwub.com/",
-		"sources": "https://github.com/IzawaNanako/withering-bridge"
-	},
-	"license": "LGPL-3.0-or-later",
-	"icon": "assets/withering-bridge/icon.png",
-	"environment": "server",
-	"entrypoints": {
-		"server": [
-			"com.saduwub.withering_bridge.WitheringBridge"
-		]
-	},
-	"mixins": [
-		"withering-bridge.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.19.5",
-		"minecraft": "~26.3",
-		"java": ">=25",
-		"fabric-api": "*"
-	}
+  "schemaVersion": 1,
+  "id": "withering-bridge",
+  "version": "${version}",
+  "name": "Withering Bridge",
+  "description": "Lite mod that bridges the chat between Minecraft and Discord.",
+  "authors": [
+    "Wither"
+  ],
+  "contact": {
+    "homepage": "https://www.saduwub.com/",
+    "sources": "https://github.com/IzawaNanako/withering-bridge"
+  },
+  "license": "LGPL-3.0-or-later",
+  "icon": "assets/withering-bridge/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "com.saduwub.withering_bridge.WitheringBridge"
+    ]
+  },
+  "mixins": [
+    "withering-bridge.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
 }

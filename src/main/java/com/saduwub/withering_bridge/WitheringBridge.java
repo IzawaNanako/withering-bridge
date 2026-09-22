@@ -8,18 +8,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WitheringBridge implements DedicatedServerModInitializer {
-	public static final Logger LOGGER = LoggerFactory.getLogger("dc-bridge");
+    public static final Logger LOGGER = LoggerFactory.getLogger("dc-bridge");
 
-	@Override
-	public void onInitializeServer() {
-		LOGGER.info("[Withering Bridge] Initializing...");
+    @Override
+    public void onInitializeServer() {
+        LOGGER.info("[Withering Bridge] Initializing...");
 
-		BridgeConfig config = BridgeConfig.get();
+        BridgeConfig config = BridgeConfig.get();
 
-		if (config.enableBridge) {
-			LOGGER.info("[Withering Bridge] Mod enabled. Will connect to: {}", config.wsUri);
-			BridgeWebSocketClient.start();
-			BridgeEventHandler.register();
-		}
-	}
+        if (config.enableBridge) {
+            LOGGER.info("[Withering Bridge] Mod enabled. Will connect to: {}", config.wsUri);
+            BridgeWebSocketClient.start();
+            BridgeEventHandler.register();
+        }
+    }
 }
