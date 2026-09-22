@@ -14,6 +14,7 @@ public class BridgePayloads {
             List<String> mentions,
             List<String> attachments,
             boolean isEveryonePing,
-            boolean renderMarkdown
+            boolean renderMarkdown,
+            Integer roleColor
     ) {}
 }

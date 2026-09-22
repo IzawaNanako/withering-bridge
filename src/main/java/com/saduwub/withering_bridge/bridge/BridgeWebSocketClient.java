@@ -6,6 +6,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -117,7 +118,13 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
 
         server.execute(() -> {
             MutableComponent prefix = Component.literal("[Discord] ").withStyle(ChatFormatting.BLUE);
-            MutableComponent name = Component.literal("<" + data.username() + "> ").withStyle(ChatFormatting.GRAY);
+            MutableComponent name = Component.literal("<" + data.username() + "> ");
+
+            if (data.roleColor() != null && data.roleColor() != 0) {
+                name.withStyle(style -> style.withColor(TextColor.fromRgb(data.roleColor())));
+            } else {
+                name.withStyle(ChatFormatting.GRAY);
+            }
 
             String safeMessage = truncateDiscordMessage(data.message());
 
@@ -195,7 +202,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 if (renderMarkdown) {
                     if (part.startsWith("**") && part.endsWith("**") && part.length() > 4) {
                         textNode = Component.literal(part.substring(2, part.length() - 2)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD);
-                    } else if (part.startsWith("*") && part.endsWith("*") && part.length() > 2) {
+                    } else if ((part.startsWith("*") && part.endsWith("*") || part.startsWith("_") && part.endsWith("_")) && part.length() > 2) {
                         textNode = Component.literal(part.substring(1, part.length() - 1)).withStyle(ChatFormatting.WHITE, ChatFormatting.ITALIC);
                     }
                 }
