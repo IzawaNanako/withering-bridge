@@ -17,8 +17,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(PlayerAdvancements.class)
 public abstract class PlayerAdvancementsMixin {
 
-    @Shadow private ServerPlayer player;
-    @Shadow public abstract AdvancementProgress getOrStartProgress(AdvancementHolder advancement);
+    @Shadow
+    private ServerPlayer player;
+
+    @Shadow
+    public abstract AdvancementProgress getOrStartProgress(AdvancementHolder advancement);
 
     @SuppressWarnings("resource")
     @Inject(method = "award", at = @At("RETURN"))
