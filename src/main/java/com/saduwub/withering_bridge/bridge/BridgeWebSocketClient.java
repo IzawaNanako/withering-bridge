@@ -253,4 +253,20 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
             webSocket.sendText(json, true);
         }
     }
+
+    public void stop() {
+        scheduler.shutdownNow();
+
+        if (webSocket != null && !webSocket.isOutputClosed()) {
+            try {
+                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Server shutting down")
+                        .toCompletableFuture()
+                        .get(2, TimeUnit.SECONDS);
+            } catch (Exception ignored) {
+                webSocket.abort();
+            } finally {
+                webSocket = null;
+            }
+        }
+    }
 }
