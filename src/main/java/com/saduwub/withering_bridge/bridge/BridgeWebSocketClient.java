@@ -9,9 +9,11 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -44,17 +46,6 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return instance;
     }
 
-    private static ClickEvent.OpenUrl createSafeOpenUrl(String rawUrl) {
-        try {
-            URI uri = URI.create(rawUrl);
-            String scheme = uri.getScheme();
-            if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-                return new ClickEvent.OpenUrl(uri);
-            }
-        } catch (Exception ignored) {}
-        return null;
-    }
-
     @SuppressWarnings("resource") private void connect() {
         if (isConnecting || (webSocket != null && !webSocket.isInputClosed())) {
             return;
@@ -83,7 +74,8 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         scheduler.schedule(this::connect, 5, TimeUnit.SECONDS);
     }
 
-    @Override public void onOpen(WebSocket webSocket) {
+    @Override
+    public void onOpen(WebSocket webSocket) {
         this.webSocket = webSocket;
 
         BridgeConfig config = BridgeConfig.get();
@@ -94,7 +86,8 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         WebSocket.Listener.super.onOpen(webSocket);
     }
 
-    @Override public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+    @Override
+    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
         textBuffer.append(data);
 
         if (last) {
@@ -124,9 +117,10 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         }
 
         server.execute(() -> {
+            MutableComponent replyHeader = buildReplyComponent(data.replyData());
             MutableComponent prefix = Component.literal("[Discord] ").withStyle(ChatFormatting.BLUE);
-            MutableComponent name = Component.literal("<" + data.username() + "> ");
 
+            MutableComponent name = Component.literal("<" + data.username() + "> ");
             if (data.roleColor() != null && data.roleColor() != 0) {
                 name.withStyle(style -> style.withColor(TextColor.fromRgb(data.roleColor())));
             } else {
@@ -146,13 +140,37 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 }
             }
 
-            MutableComponent fullMessage = prefix.append(name).append(content);
+            MutableComponent mainMessage = prefix.append(name).append(content);
+
+            MutableComponent fullMessage = Component.empty();
+            if (replyHeader != null) {
+                fullMessage.append(replyHeader).append(Component.literal("\n"));
+            }
+            fullMessage.append(mainMessage);
+
+            WitheringBridge.LOGGER.info("<Bridge> {}", fullMessage.getString());
+
+            String plainMessageText = fullMessage.getString().toLowerCase();
 
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                boolean isPinged = data.isEveryonePing() || data.mentions().contains(player.getName().getString());
+                String ign = player.getGameProfile().name().toLowerCase();
 
-                if (isPinged) {
-                    player.playSound(SoundEvents.NOTE_BLOCK_PLING.value(), 1.0f, 1.0f);
+                boolean isEveryone = data.isEveryonePing();
+                boolean isExplicitMention = data.mentions() != null && data.mentions().stream().anyMatch(m -> m.equalsIgnoreCase(ign));
+
+                boolean isIgnMentioned = plainMessageText.matches(".*@" + java.util.regex.Pattern.quote(ign) + "\\b.*");
+
+                if (isEveryone || isExplicitMention || isIgnMentioned) {
+                    player.connection.send(new ClientboundSoundPacket(
+                            SoundEvents.NOTE_BLOCK_PLING,
+                            SoundSource.PLAYERS,
+                            player.getX(),
+                            player.getY(),
+                            player.getZ(),
+                            1.0f,
+                            1.0f,
+                            server.overworld().getRandom().nextLong()
+                    ));
                 }
 
                 player.sendSystemMessage(fullMessage);
@@ -191,13 +209,13 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 boolean spanIsHoverText = span.hoverText() != null && !span.hoverText().isEmpty();
                 if (Boolean.TRUE.equals(span.spoiler())) {
                     MutableComponent spoilerContent = Component.literal(span.text()).withStyle(ChatFormatting.WHITE);
-                    MutableComponent tooltip = Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(spoilerContent);
+                    MutableComponent hoverText = Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(spoilerContent);
 
                     if (spanIsHoverText) {
-                        tooltip.append(Component.literal("\n" + span.hoverText()).withStyle(ChatFormatting.GRAY));
+                        hoverText.append(Component.literal("\n" + span.hoverText()).withStyle(ChatFormatting.GRAY));
                     }
 
-                    HoverEvent hover = new HoverEvent.ShowText(tooltip);
+                    HoverEvent hover = new HoverEvent.ShowText(hoverText);
                     style = style.withObfuscated(true).withHoverEvent(hover);
                 } else if (spanIsHoverText) {
                     HoverEvent hover = new HoverEvent.ShowText(Component.literal(span.hoverText()).withStyle(ChatFormatting.GRAY));
@@ -219,7 +237,18 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return root;
     }
 
-    @Override public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+    private MutableComponent buildReplyComponent(BridgePayloads.ReplyData reply) {
+        if (reply == null || reply.author() == null) {
+            return null;
+        }
+
+        HoverEvent hover = new HoverEvent.ShowText(Component.literal("Replying to @" + reply.author() + ":\n").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).append(Component.literal(reply.hoverText()).withStyle(ChatFormatting.DARK_GRAY)));
+
+        return Component.literal(" ┌── ").withStyle(ChatFormatting.DARK_GRAY).append(Component.literal("@" + reply.author() + ": ").withStyle(ChatFormatting.GRAY)).append(Component.literal(reply.preview()).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC)).withStyle(style -> style.withHoverEvent(hover));
+    }
+
+    @Override
+    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
         if (this.webSocket != null) {
             this.webSocket.abort();
             this.webSocket = null;
@@ -230,7 +259,8 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return null;
     }
 
-    @Override public void onError(WebSocket webSocket, Throwable error) {
+    @Override
+    public void onError(WebSocket webSocket, Throwable error) {
         if (this.webSocket != null) {
             this.webSocket.abort();
             this.webSocket = null;
