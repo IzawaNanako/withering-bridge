@@ -3,10 +3,7 @@ package com.saduwub.withering_bridge.bridge;
 import com.google.gson.Gson;
 import com.saduwub.withering_bridge.WitheringBridge;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.chat.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -18,12 +15,14 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class BridgeWebSocketClient implements WebSocket.Listener {
     private static final Gson GSON = new Gson();
+    private static final Pattern URL_PATTERN = Pattern.compile("https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+");
     private static BridgeWebSocketClient instance;
     private final StringBuilder textBuffer = new StringBuilder();
-
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "WitheringBridge-WS");
         thread.setDaemon(true);
@@ -43,6 +42,17 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return instance;
     }
 
+    private static ClickEvent.OpenUrl createSafeOpenUrl(String rawUrl) {
+        try {
+            URI uri = URI.create(rawUrl);
+            String scheme = uri.getScheme();
+            if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+                return new ClickEvent.OpenUrl(uri);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     @SuppressWarnings("resource")
     private void connect() {
         if (isConnecting || (webSocket != null && !webSocket.isInputClosed())) {
@@ -54,16 +64,14 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
 
         try {
             HttpClient client = HttpClient.newHttpClient();
-            client.newWebSocketBuilder()
-                    .buildAsync(URI.create(config.wsUri), this)
-                    .whenComplete((ws, error) -> {
-                        isConnecting = false;
-                        if (error != null) {
-                            scheduleReconnect();
-                        } else {
-                            this.webSocket = ws;
-                        }
-                    });
+            client.newWebSocketBuilder().buildAsync(URI.create(config.wsUri), this).whenComplete((ws, error) -> {
+                isConnecting = false;
+                if (error != null) {
+                    scheduleReconnect();
+                } else {
+                    this.webSocket = ws;
+                }
+            });
         } catch (Exception e) {
             isConnecting = false;
             scheduleReconnect();
@@ -133,11 +141,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
             for (String url : data.attachments()) {
                 ClickEvent.OpenUrl clickEvent = createSafeOpenUrl(url);
                 if (clickEvent != null) {
-                    content.append(Component.literal(" [Attachment]").withStyle(style ->
-                            style.withColor(ChatFormatting.AQUA)
-                                    .withUnderlined(true)
-                                    .withClickEvent(clickEvent)
-                    ));
+                    content.append(Component.literal(" [Attachment]").withStyle(style -> style.withColor(ChatFormatting.AQUA).withUnderlined(true).withClickEvent(clickEvent)));
                 }
             }
 
@@ -184,45 +188,173 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
     }
 
     private MutableComponent parseMessageContent(String text, boolean renderMarkdown) {
+        if (text == null || text.isEmpty()) {
+            return Component.empty();
+        }
+
+        if (!renderMarkdown) {
+            return parseUrlsOnly(text);
+        }
+
+        return parseTokens(text, Style.EMPTY.withColor(ChatFormatting.WHITE));
+    }
+
+    private MutableComponent parseUrlsOnly(String text) {
         MutableComponent root = Component.empty();
+        Matcher matcher = URL_PATTERN.matcher(text);
+        int lastEnd = 0;
 
-        String[] parts = text.split("(?<= )|(?= )");
-
-        for (String part : parts) {
-            ClickEvent.OpenUrl clickEvent = createSafeOpenUrl(part);
-            if ((part.startsWith("http://") || part.startsWith("https://")) && clickEvent != null) {
-                root.append(Component.literal(part).withStyle(style ->
-                        style.withColor(ChatFormatting.BLUE)
-                                .withUnderlined(true)
-                                .withClickEvent(clickEvent)
-                ));
-            } else {
-                MutableComponent textNode = Component.literal(part).withStyle(ChatFormatting.WHITE);
-
-                if (renderMarkdown) {
-                    if (part.startsWith("**") && part.endsWith("**") && part.length() > 4) {
-                        textNode = Component.literal(part.substring(2, part.length() - 2)).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD);
-                    } else if ((part.startsWith("*") && part.endsWith("*") || part.startsWith("_") && part.endsWith("_")) && part.length() > 2) {
-                        textNode = Component.literal(part.substring(1, part.length() - 1)).withStyle(ChatFormatting.WHITE, ChatFormatting.ITALIC);
-                    }
-                }
-
-                root.append(textNode);
+        while (matcher.find()) {
+            if (matcher.start() > lastEnd) {
+                root.append(Component.literal(text.substring(lastEnd, matcher.start())).withStyle(ChatFormatting.WHITE));
             }
+            String url = matcher.group();
+            root.append(createUrlComponent(url));
+            lastEnd = matcher.end();
+        }
+
+        if (lastEnd < text.length()) {
+            root.append(Component.literal(text.substring(lastEnd)).withStyle(ChatFormatting.WHITE));
         }
 
         return root;
     }
 
-    private static ClickEvent.OpenUrl createSafeOpenUrl(String rawUrl) {
+    private MutableComponent parseTokens(String input, Style currentStyle) {
+        MutableComponent root = Component.empty();
+        int len = input.length();
+        int i = 0;
+        StringBuilder buffer = new StringBuilder();
+
+        while (i < len) {
+            if (input.charAt(i) == '\\' && i + 1 < len) {
+                buffer.append(input.charAt(i + 1));
+                i += 2;
+                continue;
+            }
+
+            if (input.startsWith("http://", i) || input.startsWith("https://", i)) {
+                Matcher matcher = URL_PATTERN.matcher(input.substring(i));
+                if (matcher.find() && matcher.start() == 0) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String url = matcher.group();
+                    root.append(createUrlComponent(url));
+                    i += url.length();
+                    continue;
+                }
+            }
+
+            if (input.charAt(i) == '`') {
+                int close = input.indexOf('`', i + 1);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String codeText = input.substring(i + 1, close);
+                    Style codeStyle = currentStyle.withColor(ChatFormatting.GRAY).withItalic(false);
+                    root.append(Component.literal(codeText).withStyle(codeStyle));
+                    i = close + 1;
+                    continue;
+                }
+            }
+
+            if (input.startsWith("***", i)) {
+                int close = input.indexOf("***", i + 3);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String inner = input.substring(i + 3, close);
+                    root.append(parseTokens(inner, currentStyle.withBold(true).withItalic(true)));
+                    i = close + 3;
+                    continue;
+                }
+            }
+
+            if (input.startsWith("**", i)) {
+                int close = input.indexOf("**", i + 2);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String inner = input.substring(i + 2, close);
+                    root.append(parseTokens(inner, currentStyle.withBold(true)));
+                    i = close + 2;
+                    continue;
+                }
+            }
+
+            if (input.startsWith("__", i)) {
+                int close = input.indexOf("__", i + 2);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String inner = input.substring(i + 2, close);
+                    root.append(parseTokens(inner, currentStyle.withUnderlined(true)));
+                    i = close + 2;
+                    continue;
+                }
+            }
+
+            if (input.startsWith("~~", i)) {
+                int close = input.indexOf("~~", i + 2);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String inner = input.substring(i + 2, close);
+                    root.append(parseTokens(inner, currentStyle.withStrikethrough(true)));
+                    i = close + 2;
+                    continue;
+                }
+            }
+
+            if (input.startsWith("||", i)) {
+                int close = input.indexOf("||", i + 2);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String inner = input.substring(i + 2, close);
+
+                    HoverEvent spoilerHover = new HoverEvent.ShowText(
+                            Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(Component.literal(inner).withStyle(ChatFormatting.WHITE)));
+
+                    Style spoilerStyle = currentStyle.withObfuscated(true).withHoverEvent(spoilerHover);
+
+                    root.append(parseTokens(inner, spoilerStyle));
+                    i = close + 2;
+                    continue;
+                }
+            }
+
+            char c = input.charAt(i);
+            if (c == '*' || c == '_') {
+                int close = input.indexOf(c, i + 1);
+                if (close != -1) {
+                    flushBuffer(root, buffer, currentStyle);
+                    String inner = input.substring(i + 1, close);
+                    root.append(parseTokens(inner, currentStyle.withItalic(true)));
+                    i = close + 1;
+                    continue;
+                }
+            }
+
+            buffer.append(input.charAt(i));
+            i++;
+        }
+
+        flushBuffer(root, buffer, currentStyle);
+        return root;
+    }
+
+    private void flushBuffer(MutableComponent root, StringBuilder buffer, Style style) {
+        if (!buffer.isEmpty()) {
+            root.append(Component.literal(buffer.toString()).withStyle(style));
+            buffer.setLength(0);
+        }
+    }
+
+    private MutableComponent createUrlComponent(String url) {
+        MutableComponent comp = Component.literal(url);
         try {
-            URI uri = URI.create(rawUrl);
+            URI uri = URI.create(url);
             String scheme = uri.getScheme();
             if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-                return new ClickEvent.OpenUrl(uri);
+                return comp.withStyle(style -> style.withColor(ChatFormatting.BLUE).withUnderlined(true).withClickEvent(new ClickEvent.OpenUrl(uri)));
             }
         } catch (Exception ignored) {}
-        return null;
+
+        return comp.withStyle(ChatFormatting.BLUE, ChatFormatting.UNDERLINE);
     }
 
     @Override
@@ -259,9 +391,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
 
         if (webSocket != null && !webSocket.isOutputClosed()) {
             try {
-                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Server shutting down")
-                        .toCompletableFuture()
-                        .get(2, TimeUnit.SECONDS);
+                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Server shutting down").toCompletableFuture().get(2, TimeUnit.SECONDS);
             } catch (Exception ignored) {
                 webSocket.abort();
             } finally {
