@@ -55,8 +55,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return null;
     }
 
-    @SuppressWarnings("resource")
-    private void connect() {
+    @SuppressWarnings("resource") private void connect() {
         if (isConnecting || (webSocket != null && !webSocket.isInputClosed())) {
             return;
         }
@@ -84,8 +83,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         scheduler.schedule(this::connect, 5, TimeUnit.SECONDS);
     }
 
-    @Override
-    public void onOpen(WebSocket webSocket) {
+    @Override public void onOpen(WebSocket webSocket) {
         this.webSocket = webSocket;
 
         BridgeConfig config = BridgeConfig.get();
@@ -96,8 +94,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         WebSocket.Listener.super.onOpen(webSocket);
     }
 
-    @Override
-    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+    @Override public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
         textBuffer.append(data);
 
         if (last) {
@@ -141,6 +138,9 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
             for (String url : data.attachments()) {
                 ClickEvent.OpenUrl clickEvent = createSafeOpenUrl(url);
                 if (clickEvent != null) {
+                    if (content.getString().isEmpty()) {
+                        content.append(Component.literal(" "));
+                    }
                     content.append(Component.literal(" [Attachment]").withStyle(style -> style.withColor(ChatFormatting.AQUA).withUnderlined(true).withClickEvent(clickEvent)));
                 }
             }
@@ -189,21 +189,34 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 }
 
                 if (Boolean.TRUE.equals(span.spoiler())) {
-                    HoverEvent hover = new HoverEvent.ShowText(
-                            Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY)
-                                    .append(Component.literal(span.text()).withStyle(ChatFormatting.WHITE))
-                    );
+                    HoverEvent hover = new HoverEvent.ShowText(Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(Component.literal(span.text()).withStyle(ChatFormatting.WHITE)));
                     style = style.withObfuscated(true).withHoverEvent(hover);
+                }
+
+                boolean spanIsHoverText = span.hoverText() != null && !span.hoverText().isEmpty();
+                if (Boolean.TRUE.equals(span.spoiler())) {
+                    Component spoilerContent = Component.literal(span.text()).withStyle(ChatFormatting.WHITE);
+                    MutableComponent tooltip = Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(spoilerContent);
+
+                    if (spanIsHoverText) {
+                        tooltip.append(Component.literal("\n" + span.hoverText()).withStyle(ChatFormatting.GRAY));
+                    }
+
+                    HoverEvent hover = new HoverEvent.ShowText(tooltip);
+                    style = style.withObfuscated(true).withHoverEvent(hover);
+                } else if (spanIsHoverText) {
+                    HoverEvent hover = new HoverEvent.ShowText(Component.literal(span.hoverText()).withStyle(ChatFormatting.GRAY));
+                    style = style.withHoverEvent(hover);
                 }
 
                 if (span.url() != null && !span.url().isEmpty()) {
                     try {
                         URI uri = URI.create(span.url());
-                        style = style.withColor(ChatFormatting.BLUE)
-                                .withUnderlined(true)
-                                .withClickEvent(new ClickEvent.OpenUrl(uri));
+                        style = style.withColor(ChatFormatting.BLUE).withUnderlined(true).withClickEvent(new ClickEvent.OpenUrl(uri));
                     } catch (Exception ignored) {}
                 }
+
+                root.append(part.withStyle(style));
 
                 root.append(part.withStyle(style));
             }
@@ -214,8 +227,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return root;
     }
 
-    @Override
-    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+    @Override public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
         if (this.webSocket != null) {
             this.webSocket.abort();
             this.webSocket = null;
@@ -226,8 +238,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
         return null;
     }
 
-    @Override
-    public void onError(WebSocket webSocket, Throwable error) {
+    @Override public void onError(WebSocket webSocket, Throwable error) {
         if (this.webSocket != null) {
             this.webSocket.abort();
             this.webSocket = null;
@@ -248,7 +259,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
 
         if (webSocket != null && !webSocket.isOutputClosed()) {
             try {
-                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Server shutting down").toCompletableFuture().get(2, TimeUnit.SECONDS);
+                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Server closed").toCompletableFuture().get(2, TimeUnit.SECONDS);
             } catch (Exception ignored) {
                 webSocket.abort();
             } finally {

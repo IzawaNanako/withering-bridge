@@ -7,7 +7,7 @@ import java.util.List;
 public class BridgePayloads {
     public record BaseMessage(String type, JsonElement data) {}
 
-    public record SpanData(String text, Boolean bold, Boolean italic, Boolean underline, Boolean strikethrough, Boolean spoiler, Boolean code, String url) {}
+    public record SpanData(String text, Boolean bold, Boolean italic, Boolean underline, Boolean strikethrough, Boolean spoiler, Boolean code, String url, String hoverText) {}
 
     public record DiscordChatData(String username, String message, List<SpanData> spans, List<String> mentions, List<String> attachments, boolean isEveryonePing, boolean renderMarkdown, Integer roleColor) {}
 
