@@ -17,7 +17,7 @@ public class BridgeEventHandler {
         ServerLifecycleEvents.SERVER_STOPPING.register(_ -> {
             BridgeWebSocketClient client = BridgeWebSocketClient.getInstance();
             if (client != null) {
-                BridgePayloads.McSystemData data = new BridgePayloads.McSystemData("**Server stopping!**", "stop");
+                BridgePayloads.McSystemData data = new BridgePayloads.McSystemData("**Server stopped!**", "stop");
                 client.sendPayload("system_mc_to_discord", data);
 
                 client.stop();
