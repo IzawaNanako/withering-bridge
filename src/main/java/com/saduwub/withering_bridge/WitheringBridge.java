@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WitheringBridge implements DedicatedServerModInitializer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("dc-bridge");
+    public static final Logger LOGGER = LoggerFactory.getLogger("withering-bridge");
 
     @Override
     public void onInitializeServer() {
