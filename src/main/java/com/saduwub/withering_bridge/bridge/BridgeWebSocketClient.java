@@ -135,13 +135,14 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
 
             MutableComponent content = buildMessageComponent(data);
 
-            for (String url : data.attachments()) {
-                ClickEvent.OpenUrl clickEvent = createSafeOpenUrl(url);
-                if (clickEvent != null) {
-                    if (content.getString().isEmpty()) {
-                        content.append(Component.literal(" "));
+            if (data.attachments() != null && !data.attachments().isEmpty()) {
+                for (String url : data.attachments()) {
+                    if (!content.getString().isEmpty()) {
+                        content.append(Component.literal(" ").withStyle(ChatFormatting.RESET));
                     }
-                    content.append(Component.literal(" [Attachment]").withStyle(style -> style.withColor(ChatFormatting.AQUA).withUnderlined(true).withClickEvent(clickEvent)));
+
+                    MutableComponent attachComp = Component.literal("[Attachment]").withStyle(style -> style.withColor(ChatFormatting.AQUA).withUnderlined(true).withClickEvent(new ClickEvent.OpenUrl(URI.create(url))).withHoverEvent(new HoverEvent.ShowText(Component.literal(url).withStyle(ChatFormatting.GRAY))));
+                    content.append(attachComp);
                 }
             }
 
@@ -183,19 +184,13 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 if (Boolean.TRUE.equals(span.strikethrough())) {
                     style = style.withStrikethrough(true);
                 }
-
                 if (Boolean.TRUE.equals(span.code())) {
                     style = style.withColor(ChatFormatting.GRAY).withItalic(false);
                 }
 
-                if (Boolean.TRUE.equals(span.spoiler())) {
-                    HoverEvent hover = new HoverEvent.ShowText(Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(Component.literal(span.text()).withStyle(ChatFormatting.WHITE)));
-                    style = style.withObfuscated(true).withHoverEvent(hover);
-                }
-
                 boolean spanIsHoverText = span.hoverText() != null && !span.hoverText().isEmpty();
                 if (Boolean.TRUE.equals(span.spoiler())) {
-                    Component spoilerContent = Component.literal(span.text()).withStyle(ChatFormatting.WHITE);
+                    MutableComponent spoilerContent = Component.literal(span.text()).withStyle(ChatFormatting.WHITE);
                     MutableComponent tooltip = Component.literal("Spoiler: ").withStyle(ChatFormatting.GRAY).append(spoilerContent);
 
                     if (spanIsHoverText) {
@@ -217,10 +212,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 }
 
                 root.append(part.withStyle(style));
-
-                root.append(part.withStyle(style));
             }
-
             return root;
         }
         root.append(Component.literal(data.message()).withStyle(ChatFormatting.WHITE));
