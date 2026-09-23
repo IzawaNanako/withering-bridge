@@ -158,7 +158,7 @@ public class BridgeWebSocketClient implements WebSocket.Listener {
                 boolean isEveryone = data.isEveryonePing();
                 boolean isExplicitMention = data.mentions() != null && data.mentions().stream().anyMatch(m -> m.equalsIgnoreCase(ign));
 
-                boolean isIgnMentioned = plainMessageText.matches(".*@" + java.util.regex.Pattern.quote(ign) + "\\b.*");
+                boolean isIgnMentioned = plainMessageText.matches(".*\\b" + java.util.regex.Pattern.quote(ign) + "\\b.*");
 
                 if (isEveryone || isExplicitMention || isIgnMentioned) {
                     player.connection.send(new ClientboundSoundPacket(
